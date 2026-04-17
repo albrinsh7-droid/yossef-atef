@@ -1,0 +1,319 @@
+:root{
+    --primary:#007bff;
+    --accent:#28a745;
+    --card:#fff;
+    --bg:#eef3ff;
+    --soft:#f7f9ff;
+    --radius:14px;
+    --shadow:0 10px 30px rgba(10,20,50,0.08);
+}
+
+body{
+    font-family:"Tajawal", Arial, sans-serif;
+    margin:0; padding:0;
+    background:linear-gradient(#e6edff,#fdfdff);
+    color:#222; text-align:right;
+    transition: background .4s ease;
+}
+
+/* Header */
+header{
+    background:var(--primary);
+    color:#fff;
+    padding:20px 28px;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    box-shadow:0 6px 20px rgba(0,0,0,.15);
+    position:sticky;
+    top:0;
+    z-index:100;
+}
+nav a{
+    color:#fff; margin-left:16px;
+    text-decoration:none;
+    font-weight:600;
+    transition:opacity .3s;
+}
+nav a:hover{ opacity:.7 }
+
+/* Main containers fade-in */
+.container{
+    max-width:980px;
+    margin:34px auto;
+    padding:26px;
+    background:var(--card);
+    border-radius:var(--radius);
+    box-shadow:var(--shadow);
+    animation:fadeUp .6s ease;
+}
+
+/* Section separation */
+section{
+    padding:22px;
+    background:var(--soft);
+    border-radius:var(--radius);
+    margin-bottom:24px;
+    box-shadow:0 4px 12px rgba(0,0,0,.05);
+    animation:fade .7s ease;
+}
+
+/* Form Styling */
+form.grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+    gap:18px;
+}
+input{
+    width:100%;
+    padding:12px;
+    border:1px solid #d7dbee;
+    border-radius:10px;
+    font-size:15px;
+    transition:border .3s, transform .2s;
+}
+input:focus{
+    border-color:var(--primary);
+    transform:scale(1.02);
+    outline:none;
+}
+
+/* Buttons */
+button.primary{
+    background:var(--accent);
+    color:#fff;
+    border:none;
+    padding:12px 20px;
+    border-radius:12px;
+    cursor:pointer;
+    font-weight:700;
+    transition:transform .25s, box-shadow .25s;
+    box-shadow:0 6px 14px rgba(0,0,0,.15);
+}
+button.primary:hover{
+    transform:translateY(-3px);
+    box-shadow:0 10px 20px rgba(0,0,0,.2);
+}
+
+/* Flight Card */
+.flight-card{
+    border-radius:14px;
+    padding:18px;
+    background:#fff;
+    border:1px solid #eef2ff;
+    margin-bottom:14px;
+    box-shadow:0 6px 18px rgba(10,20,50,0.06);
+    transition:transform .25s, box-shadow .25s;
+    animation:slide .5s ease;
+}
+.flight-card:hover{
+    transform:scale(1.015);
+    box-shadow:0 10px 26px rgba(0,0,0,.1);
+}
+
+/* Mode Chip */
+.chip{
+    padding:7px 14px;
+    border-radius:24px;
+    background:#eaf0ff;
+    color:var(--primary);
+    font-weight:600;
+    box-shadow:0 3px 8px rgba(0,0,0,.1);
+    animation:pulse 3s infinite ease-in-out;
+}
+
+.small{ font-size:13px; color:#444 }
+
+/* Animations */
+@keyframes fadeUp {
+    from { opacity:0; transform:translateY(20px); }
+    to { opacity:1; transform:translateY(0); }
+}
+@keyframes fade {
+    from { opacity:0; }
+    to { opacity:1; }
+}
+@keyframes slide {
+    from { opacity:0; transform:translateX(-20px); }
+    to { opacity:1; transform:translateX(0); }
+}
+@keyframes pulse {
+    0%{ transform:scale(1); }
+    50%{ transform:scale(1.04); }
+    100%{ transform:scale(1); }
+}
+:root{
+  --primary:#007bff;
+  --accent:#28a745;
+  --muted:#6b7280;
+  --card:#fff;
+  --bg:#eef3ff;
+  --soft:#f7f9ff;
+  --radius:14px;
+  --shadow:0 10px 30px rgba(10,20,50,0.08);
+  --glass: rgba(255,255,255,0.6);
+}
+
+/* DARK THEME variables (swapped) */
+body[data-theme="dark"]{
+  --primary:#4aa3ff;
+  --accent:#2ecc71;
+  --muted:#cbd5e1;
+  --card:#0f1724;
+  --bg: linear-gradient(180deg,#071022,#0b1220);
+  --soft: rgba(255,255,255,0.03);
+  --glass: rgba(255,255,255,0.04);
+  color: #e6eef8;
+}
+
+/* base */
+body{
+  font-family:"Tajawal", Arial, sans-serif;
+  margin:0; padding:0;
+  background:var(--bg);
+  color:var(--muted);
+  text-align:right;
+  transition: background .35s ease, color .25s ease;
+}
+
+/* header right UX */
+.header-right-ux{
+  display:flex; gap:10px; align-items:center;
+  margin-left:12px;
+}
+.icon-btn{
+  background:transparent;
+  border:1px solid rgba(255,255,255,0.12);
+  padding:8px;
+  border-radius:10px;
+  cursor:pointer;
+  color:inherit;
+  font-size:16px;
+  backdrop-filter: blur(4px);
+  transition: transform .18s ease, background .18s;
+}
+.icon-btn:hover{ transform:translateY(-3px); }
+
+/* plane logo animation */
+.plane-logo{ width:44px; height:38px; display:flex; align-items:center; justify-content:center; }
+.plane-logo svg{ transform-origin:center; animation:plane-bob 3.6s ease-in-out infinite; filter: drop-shadow(0 6px 12px rgba(0,0,0,.12)); }
+@keyframes plane-bob{
+  0%{ transform:translateY(0) rotate(0deg) }
+  40%{ transform:translateY(-6px) rotate(-6deg) }
+  70%{ transform:translateY(-3px) rotate(-2deg) }
+  100%{ transform:translateY(0) rotate(0deg) }
+}
+
+/* plane trail (stroke dash giving movement) */
+#plane-path{ stroke-dasharray: 120; stroke-dashoffset: 120; animation:plane-trail 2.6s linear infinite; opacity:.95; }
+@keyframes plane-trail{
+  0%{ stroke-dashoffset: 120; opacity: .6 }
+  60%{ stroke-dashoffset: 0; opacity: 1 }
+  100%{ stroke-dashoffset: -80; opacity: .5 }
+}
+
+/* bookings button (secondary) */
+.secondary{
+  background:transparent;
+  border:1px solid rgba(255,255,255,0.06);
+  color:inherit;
+  padding:8px 12px;
+  border-radius:10px;
+  cursor:pointer;
+  font-weight:700;
+}
+
+/* Loader overlay */
+#global-loader{
+  position:fixed;
+  inset:0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:linear-gradient(180deg, rgba(0,0,0,0.12), rgba(0,0,0,0.06));
+  z-index:9999;
+  opacity:0;
+  pointer-events:none;
+  transition:opacity .25s ease;
+}
+#global-loader.show{ opacity:1; pointer-events:auto; }
+.loader-box{
+  background:var(--card);
+  padding:18px 20px;
+  border-radius:14px;
+  display:flex;
+  gap:12px;
+  align-items:center;
+  box-shadow:0 10px 30px rgba(0,0,0,.16);
+  transform:translateY(8px);
+}
+.spinner{
+  width:42px; height:42px;
+  border-radius:50%;
+  border:4px solid rgba(0,0,0,0.08);
+  border-top-color:var(--primary);
+  animation:spin 1s linear infinite;
+}
+@keyframes spin{ to{ transform:rotate(360deg); } }
+.loader-text{ font-weight:700; color:var(--muted) }
+
+/* Cards upgrade */
+.flight-card{
+  border-radius:16px;
+  padding:18px;
+  background:linear-gradient(180deg,var(--card), rgba(255,255,255,0.96));
+  border:1px solid rgba(0,0,0,0.04);
+  margin-bottom:14px;
+  box-shadow:0 8px 24px rgba(2,6,23,0.06);
+  transition:transform .28s cubic-bezier(.2,.9,.35,1), box-shadow .28s;
+  overflow:hidden;
+  position:relative;
+}
+.flight-card::before{
+  content:"";
+  position:absolute;
+  left:0; top:0; height:6px; width:40%;
+  background:linear-gradient(90deg,var(--primary), var(--accent));
+  opacity:.12;
+}
+.flight-card:hover{ transform:translateY(-6px); box-shadow:0 18px 40px rgba(2,6,23,0.12); }
+
+/* price pill */
+.price-pill{
+  display:inline-block; padding:8px 12px; border-radius:10px; font-weight:800;
+  background:linear-gradient(90deg,rgba(40,167,69,0.1), rgba(0,123,255,0.06));
+  color:var(--muted);
+}
+
+/* bookings full-screen panel (separate screen) */
+#bookings-panel{
+  position:fixed;
+  top:0; right:0;
+  width:100%;
+  max-width:720px;
+  height:100vh;
+  background:var(--card);
+  box-shadow:-18px 0 40px rgba(2,6,23,0.12);
+  transform:translateX(110%);
+  transition:transform .45s cubic-bezier(.2,.9,.35,1);
+  z-index:9998;
+  padding:24px;
+  overflow:auto;
+  border-radius:12px 0 0 12px;
+}
+#bookings-panel.show{ transform:translateX(0); }
+#bookings-panel .close-panel{
+  position:sticky; top:14px; margin-bottom:12px; float:left;
+}
+#bookings-panel h3{ margin-top:18px; color:var(--muted) }
+
+/* responsive: make it full width on mobile */
+@media (max-width:720px){
+  #bookings-panel{ max-width:100%; width:100%; border-radius:0; }
+}
+
+/* page fade for main container when panel open */
+.panel-open .container{ filter:blur(2px) saturate(.95); transform:scale(.995); transition:all .28s; }
+
+/* Smooth anchor scrolling (already present, keep) */
+html{ scroll-behavior:smooth; }

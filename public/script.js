@@ -1,230 +1,115 @@
-/* Frontend-only app with optional API mode or IndexedDB offline mode.
-   Mode switching: toggle checkbox #use-api. Default: Offline (IndexedDB).
-*/
+/* Frontend for Vercel + Aiven MySQL */
 
 const useApiCheckbox = document.getElementById('use-api');
 const modeChip = document.getElementById('mode-chip');
 const statusEl = document.getElementById('status');
-let useApi = true; // نخليه true افتراضياً عند الرفع عشان يكلم الـ API
-
-// API base - تم تغييره للعمل على Vercel
 const API_BASE = '/api';
+let useApi = true;
 
-useApiCheckbox.checked = true; // تفعيل الـ API في الواجهة
+// تفعيل الوضع الأونلاين افتراضياً
+useApiCheckbox.checked = true;
 
 useApiCheckbox.addEventListener('change', e => {
     useApi = e.target.checked;
     modeChip.textContent = `الوضع: ${useApi ? 'API (خادم خارجي)' : 'Offline (IndexedDB)'} `;
-    loadBookings();
 });
 
-// Simple IndexedDB wrapper
-const DB_NAME = 'flight_booking_db_v1';
-const DB_VERSION = 1;
-let db;
-function openDb(){
-    return new Promise((resolve, reject) => {
-        const req = indexedDB.open(DB_NAME, DB_VERSION);
-        req.onupgradeneeded = (ev) => {
-            db = ev.target.result;
-            if(!db.objectStoreNames.contains('flights')){
-                const flights = db.createObjectStore('flights', { keyPath: 'id', autoIncrement: true });
-                flights.createIndex('departure_city', 'departure_city', { unique: false });
-                flights.createIndex('destination_city', 'destination_city', { unique: false });
-            }
-            if(!db.objectStoreNames.contains('bookings')){
-                const bookings = db.createObjectStore('bookings', { keyPath: 'id', autoIncrement: true });
-                bookings.createIndex('bookingReference', 'bookingReference', { unique: true });
-                bookings.createIndex('flightId', 'flightId', { unique: false });
-            }
-        };
-        req.onsuccess = (ev) => { db = ev.target.result; resolve(db); };
-        req.onerror = (ev) => { reject(ev.target.error); };
-    });
-}
-
-async function addFlightToDb(flight){
-    const tx = db.transaction('flights','readwrite');
-    const store = tx.objectStore('flights');
-    return new Promise((res, rej) => { const r = store.add(flight); r.onsuccess = ()=>res(r.result); r.onerror = ()=>rej(r.error); });
-}
-
-async function getFlightsFromDb(filter){
-    filter = filter || {};
-    const tx = db.transaction('flights','readonly');
-    const store = tx.objectStore('flights');
-    return new Promise((res, rej) => {
-        const out=[]; const cur = store.openCursor();
-        cur.onsuccess = (ev)=>{
-            const cursor = ev.target.result; if(!cursor){ res(out); return; }
-            const val = cursor.value;
-            let ok=true;
-            if(filter.departure && filter.departure.trim().length) ok = ok && val.departure_city.toLowerCase().includes(filter.departure.toLowerCase());
-            if(filter.destination && filter.destination.trim().length) ok = ok && val.destination_city.toLowerCase().includes(filter.destination.toLowerCase());
-            if(filter.date && filter.date.length) {
-                const dateOnly = new Date(val.departure_time).toISOString().split('T')[0];
-                ok = ok && dateOnly === filter.date;
-            }
-            if(ok) out.push(val);
-            cursor.continue();
-        };
-        cur.onerror = (e)=> rej(e.target.error);
-    });
-}
-
-async function addBookingToDb(b){
-    const tx = db.transaction(['bookings'],'readwrite');
-    const store = tx.objectStore('bookings');
-    return new Promise((res, rej)=>{ const r=store.add(b); r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error); });
-}
-
-async function getBookingsFromDb(){
-    const tx = db.transaction('bookings','readonly');
-    const store = tx.objectStore('bookings');
-    return new Promise((res, rej)=>{ const out=[]; const cur=store.openCursor(null,'prev'); cur.onsuccess=(ev)=>{ const c=ev.target.result; if(!c){ res(out); return; } out.push(c.value); c.continue(); }; cur.onerror=(e)=>rej(e.target.error); });
-}
-
-// Seed demo data
-document.getElementById('seed-btn').addEventListener('click', async ()=>{
-    await openDb();
-    await addFlightToDb({ airline:'طيران الإمارات', flight_number:'EK123', departure_city:'دبي', destination_city:'جدة', departure_time:new Date(Date.now()+86400000).toISOString(), price:1500, currency:'SAR' });
-    await addFlightToDb({ airline:'الخطوط السعودية', flight_number:'SV456', departure_city:'الرياض', destination_city:'القاهرة', departure_time:new Date(Date.now()+172800000).toISOString(), price:1200, currency:'SAR' });
-    statusEl.textContent = 'تمت إضافة بيانات تجريبية إلى IndexedDB';
+// زر ملئ بيانات تجريبية
+document.getElementById('seed-btn').addEventListener('click', () => {
+    document.getElementById('departure').value = 'القاهرة';
+    document.getElementById('destination').value = 'الرياض';
+    document.getElementById('date').value = '2025-10-01';
+    statusEl.textContent = 'تم ملئ بيانات تجريبية.. اضغط بحث الآن!';
+    // ضغطة بحث أوتوماتيك
+    document.getElementById('flight-search-form').dispatchEvent(new Event('submit'));
 });
 
-// UI functions
-const flightsListEl = document.getElementById('flights-list');
-const bookingsListEl = document.getElementById('bookings-list');
-
-function renderFlightsLocal(flights){
-    flightsListEl.innerHTML = '';
-    if(!flights || flights.length===0){ flightsListEl.innerHTML = '<p>لا توجد رحلات مطابقة.</p>'; return; }
-    flights.forEach(f=>{
-        const div = document.createElement('div'); div.className='flight-card';
-        div.innerHTML = `<strong>${escapeHtml(f.airline)} — رحلة ${escapeHtml(f.flight_number)}</strong>
-        <div class='meta'>${escapeHtml(f.departure_city)} → ${escapeHtml(f.destination_city)} | ${new Date(f.departure_time).toLocaleString('ar-EG')}</div>
-        <div class='meta'>السعر: ${f.price} ${escapeHtml(f.currency)}</div>
-        <div style='margin-top:10px'><button class='primary' data-id='${f.id}'>حجز الآن</button></div>`;
-        flightsListEl.appendChild(div);
-    });
-    flightsListEl.querySelectorAll('button[data-id]').forEach(b=>b.addEventListener('click', async ()=>{
-        const id = Number(b.getAttribute('data-id'));
-        await handleBookingLocal(id);
-    }));
-}
-
-function renderBookingsLocal(bookings){
-    bookingsListEl.innerHTML = '';
-    if(!bookings || bookings.length===0){ bookingsListEl.innerHTML = '<p>لا توجد حجوزات حتى الآن.</p>'; return; }
-    bookings.forEach(b=>{
-        const div = document.createElement('div'); div.className='flight-card';
-        div.innerHTML = `<strong>حجز: ${escapeHtml(b.bookingReference)}</strong>
-        <div class='meta'>${escapeHtml(b.passengerName)} — ${b.passengers} مسافر</div>
-        <div class='meta'>رحلة: ${escapeHtml(b.flight.airline)} — ${escapeHtml(b.flight.flight_number)}</div>`;
-        bookingsListEl.appendChild(div);
-    });
-}
-
-function escapeHtml(s){ if(!s && s!==0) return ''; return String(s).replace(/[&<>"']/g, c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c])); }
-
-// Local handlers
-async function handleSearchLocal(e){
+// دالة البحث
+async function handleSearch(e) {
     e.preventDefault();
-    statusEl.textContent = 'جارٍ البحث...';
+    statusEl.textContent = 'جارٍ البحث في الداتا بيز...';
+    
     const departure = document.getElementById('departure').value.trim();
     const destination = document.getElementById('destination').value.trim();
     const date = document.getElementById('date').value;
-    if(useApi){
-        // call API if desired
-        try{
-            const q = new URLSearchParams({ departure, destination, date }).toString();
-            const res = await fetch(`${API_BASE}/flights?${q}`);
-            if(!res.ok) throw new Error('فشل جلب الرحلات من الخادم');
-            const flights = await res.json();
-            renderFlightsLocal(flights);
-            statusEl.textContent = 'تم التحميل من API';
-        } catch(err){ 
-            statusEl.textContent = 'خطأ API: ' + err.message; 
-            console.error(err);
-        }
-    } else {
-        await openDb();
-        const flights = await getFlightsFromDb({ departure, destination, date });
-        renderFlightsLocal(flights);
-        statusEl.textContent = 'تم التحميل من IndexedDB';
+
+    try {
+        const q = new URLSearchParams({ departure, destination }).toString(); 
+        const res = await fetch(`${API_BASE}/flights?${q}`);
+        
+        if (!res.ok) throw new Error('فشل الاتصال بالسيرفر');
+        
+        const flights = await res.json();
+        renderFlights(flights);
+        statusEl.textContent = `تم العثور على (${flights.length}) رحلة`;
+    } catch (err) {
+        statusEl.textContent = 'خطأ: ' + err.message;
     }
 }
 
-async function handleBookingLocal(flightId){
-    const passengers = parseInt(document.getElementById('passengers').value || '1');
-    const passengerName = prompt('أدخل اسم الراكب:');
-    if(!passengerName) return alert('اسم الراكب مطلوب');
-    if(useApi){
-        // call API
-        try{
-            const res = await fetch(`${API_BASE}/bookings`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ flightId, passengerName, passengers }) });
-            if(!res.ok) throw new Error('فشل إنشاء الحجز عبر API');
-            const data = await res.json();
-            alert('تم الحجز عبر API. رقم الحجز: ' + data.bookingReference);
-            loadBookings();
-        }catch(err){ alert('خطأ API: ' + err.message); }
-    } else {
-        // local booking
-        await openDb();
-        // read flight
-        const tx = db.transaction('flights','readonly');
-        const store = tx.objectStore('flights');
-        const f = await new Promise((res,rej)=>{ const r=store.get(flightId); r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error); });
-        if(!f) return alert('الرحلة غير موجودة');
-        const bookingReference = 'BK-' + Math.random().toString(36).slice(2,8).toUpperCase();
-        const rec = { bookingReference, passengerName, passengers, flightId, flight: f, createdAt: new Date().toISOString() };
-        await addBookingToDb(rec);
-        alert('تم الحجز محليًا. رقم الحجز: ' + bookingReference);
-        loadBookings();
+const flightsListEl = document.getElementById('flights-list');
+
+function renderFlights(flights) {
+    flightsListEl.innerHTML = '';
+    if (!flights || flights.length === 0) {
+        flightsListEl.innerHTML = '<p class="no-results">❌ لا توجد رحلات مطابقة في الداتا بيز. جرب تبحث عن (القاهرة إلى الرياض) أو (دبي إلى نيويورك).</p>';
+        return;
     }
-}
-
-async function loadBookings(){
-    if(useApi){
-        try{
-            const res = await fetch(`${API_BASE}/bookings`);
-            if(!res.ok) throw new Error('فشل جلب الحجوزات من API');
-            const list = await res.json();
-            renderBookingsLocal(list);
-            statusEl.textContent = 'حجوزات من API';
-        }catch(err){ 
-            statusEl.textContent = 'خطأ API: ' + err.message; 
-            console.error(err);
-        }
-    } else {
-        await openDb();
-        const list = await getBookingsFromDb();
-        renderBookingsLocal(list);
-        statusEl.textContent = 'حجوزات محلية (IndexedDB)';
-    }
-}
-
-// Bind events
-document.getElementById('flight-search-form').addEventListener('submit', handleSearchLocal);
-
-// initial load
-(async ()=>{ 
-    await openDb(); 
-    modeChip.textContent = `الوضع: ${useApi ? 'API (خادم خارجي)' : 'Offline (IndexedDB)'} `;
-    loadBookings(); 
-})();
-
-// Smooth scroll with animation
-document.querySelectorAll('nav a').forEach(link => {
-    link.addEventListener('click', e => {
-        const href = link.getAttribute('href');
-        if (href.startsWith('#')) {
-            e.preventDefault();
-            const section = document.querySelector(href);
-            if(section){
-              section.style.animation = 'fadeUp .6s ease';
-              section.scrollIntoView({ behavior: 'smooth' });
-            }
-        }
+    flights.forEach(f => {
+        const div = document.createElement('div');
+        div.className = 'flight-card';
+        div.innerHTML = `
+            <div class="airline-info">
+                <strong>✈️ ${escapeHtml(f.airline)} — رحلة ${escapeHtml(f.flight_number)}</strong>
+            </div>
+            <div class='meta'>${escapeHtml(f.departure_city)} ← ${escapeHtml(f.destination_city)}</div>
+            <div class='meta'>📅 التاريخ: ${new Date(f.departure_time).toLocaleDateString('ar-EG')}</div>
+            <div class='price-tag'>السعر: ${f.price} ${escapeHtml(f.currency)}</div>
+            <button class='primary' onclick="handleBooking(${f.id})">حجز هذه الرحلة</button>
+        `;
+        flightsListEl.appendChild(div);
     });
-});
+}
+
+async function handleBooking(flightId) {
+    const passengerName = prompt('من فضلك أدخل اسم المسافر بالكامل:');
+    if (!passengerName) return;
+    const passengers = document.getElementById('passengers').value || 1;
+
+    try {
+        const res = await fetch(`${API_BASE}/bookings`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ flightId, passengerName, passengers })
+        });
+        const data = await res.json();
+        alert(`✅ تم الحجز بنجاح!\nرقم الحجز الخاص بك هو: ${data.bookingReference}`);
+        loadBookings();
+    } catch (err) {
+        alert('حدث خطأ أثناء الحجز');
+    }
+}
+
+async function loadBookings() {
+    const bookingsListEl = document.getElementById('bookings-list');
+    try {
+        const res = await fetch(`${API_BASE}/bookings`);
+        const list = await res.json();
+        bookingsListEl.innerHTML = '';
+        if (list.length === 0) { bookingsListEl.innerHTML = '<p>لا توجد حجوزات مسجلة.</p>'; return; }
+        list.forEach(b => {
+             const div = document.createElement('div');
+             div.className = 'flight-card';
+             div.innerHTML = `<strong>🎟️ حجز: ${b.bookingReference}</strong><br>المسافر: ${b.passengerName}<br>الرحلة: ${b.flight.airline}`;
+             bookingsListEl.appendChild(div);
+        });
+    } catch (e) { console.error(e); }
+}
+
+function escapeHtml(s) { 
+    if (!s && s !== 0) return ''; 
+    return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); 
+}
+
+document.getElementById('flight-search-form').addEventListener('submit', handleSearch);
+window.onload = loadBookings;

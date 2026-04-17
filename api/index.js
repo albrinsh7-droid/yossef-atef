@@ -17,20 +17,16 @@ const dbConfig = {
     database: process.env.DB_NAME,
     port: process.env.DB_PORT || 3306,
     ssl: { rejectUnauthorized: false },
-    multipleStatements: true // مهم لتشغيل ملف الـ SQL
+    multipleStatements: true 
 };
 
-// نقطة نهاية لعمل Setup لقاعدة البيانات
 app.get(`${API_BASE}/setup`, async (req, res) => {
     try {
         const connection = await mysql.createConnection(dbConfig);
         const sqlPath = path.join(__dirname, 'setup.sql');
         const sql = fs.readFileSync(sqlPath, 'utf8');
-        
-        // تنفيذ الأوامر (بنقسمها لو السيرفر مش بيدعم multipleStatements)
         await connection.query(sql);
         await connection.end();
-        
         res.send('✅ Database setup successfully! Tables created and demo data added.');
     } catch (error) {
         console.error('Setup Error:', error);
@@ -39,17 +35,25 @@ app.get(`${API_BASE}/setup`, async (req, res) => {
 });
 
 app.get(`${API_BASE}/flights`, async (req, res) => {
-    const { departure, destination, date } = req.query;
+    const { departure, destination } = req.query;
     let sql = 'SELECT * FROM Flights WHERE 1=1';
     const params = [];
 
+    const normalizeArabic = (str) => {
+        if (!str) return '';
+        return str
+            .replace(/[أإآ]/g, 'a') // تحويل كل الألفات لشيء واحد
+            .replace(/ة/g, 'h');    // التاء المربوطة لـ هاء
+    };
+
     if (departure) {
-        sql += ' AND departure_city LIKE ?';
-        params.push(`%${departure}%`);
+        const normalized = normalizeArabic(departure);
+        sql += ` AND REPLACE(REPLACE(REPLACE(REPLACE(departure_city, 'أ', 'ا'), 'إ', 'ا'), 'آ', 'ا'), 'ة', 'ه') LIKE ?`;
+        params.push(`%${departure.replace(/ة/g, 'ه').replace(/[أإآ]/g, 'ا')}%`);
     }
     if (destination) {
-        sql += ' AND destination_city LIKE ?';
-        params.push(`%${destination}%`);
+        sql += ` AND REPLACE(REPLACE(REPLACE(REPLACE(destination_city, 'أ', 'ا'), 'إ', 'ا'), 'آ', 'ا'), 'ة', 'ه') LIKE ?`;
+        params.push(`%${destination.replace(/ة/g, 'ه').replace(/[أإآ]/g, 'ا')}%`);
     }
 
     try {
@@ -64,7 +68,6 @@ app.get(`${API_BASE}/flights`, async (req, res) => {
 app.post(`${API_BASE}/bookings`, async (req, res) => {
     const { flightId, passengerName, passengers } = req.body;
     const bookingReference = 'BK-' + Math.random().toString(36).slice(2,8).toUpperCase();
-
     try {
         const dbPool = mysql.createPool(dbConfig);
         await dbPool.query(

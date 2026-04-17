@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>تطبيق حجز تذاكر الطيران </title>
+    <link rel="stylesheet" href="style.css"> 
+</head>
+<body>
+    <header>
+        <h1>✈️ حجز تذاكر الطيران</h1>
+        <nav>
+            <a href="#">الرئيسية</a>
+            <a href="#bookings">حجوزاتي</a>
+        </nav>
+    </header>
+
+    <main class="container">
+        <div class="controls">
+            <div class="chip" id="mode-chip">الوضع: Offline</div>
+            <label class="small">Use API: <input type="checkbox" id="use-api"></label>
+            <button id="seed-btn" class="primary">زر ملئ بيانات تجريبية</button>
+        </div>
+
+        <section>
+            <h2>ابحث عن أفضل الرحلات</h2>
+            <form id="flight-search-form" class="grid">
+                <div>
+                    <label for="departure">من:</label>
+                    <input id="departure" type="text" placeholder="مدينة المغادرة" required>
+                </div>
+                <div>
+                    <label for="destination">إلى:</label>
+                    <input id="destination" type="text" placeholder="مدينة الوصول" required>
+                </div>
+                <div>
+                    <label for="date">تاريخ السفر:</label>
+                    <input id="date" type="date" required>
+                </div>
+                <div>
+                    <label for="passengers">عدد المسافرين:</label>
+                    <input id="passengers" type="number" min="1" value="1" required>
+                </div>
+                <div style="grid-column:1/-1; display:flex; gap:10px; align-items:center">
+                    <button type="submit" class="primary">بحث عن رحلات</button>
+                    <div id="status" class="small">جاهز</div>
+                </div>
+            </form>
+
+            <div id="flights-list" style="margin-top:18px"></div>
+        </section>
+
+        <section id="bookings" style="margin-top:24px">
+            <h3>حجوزاتي</h3>
+            <div id="bookings-list"></div>
+        </section>
+
+        <!-- Global loader (hidden by default) -->
+<div id="global-loader" aria-hidden="true">
+  <div class="loader-box" role="status" aria-live="polite">
+    <div class="spinner" aria-hidden="true"></div>
+    <div class="loader-text">جارٍ البحث عن أفضل الرحلات…</div>
+  </div>
+</div>
+
+<!-- Bookings panel (full-screen slide) -->
+<aside id="bookings-panel" aria-hidden="true">
+  <button class="secondary close-panel" id="close-bookings">اغلاق</button>
+  <h3>حجوزاتي</h3>
+  <div id="bookings-panel-list" style="margin-top:14px"></div>
+  <!-- Note: we will copy the bookings HTML into this panel via JS when opened -->
+</aside>
+
+
+        
+    </main>
+
+    <script src="script.js"></script>
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -94,15 +94,17 @@ document.getElementById('seed-btn').addEventListener('click', ()=>{
         'صوفيا', 'بلغراد', 'زغرب', 'برن', 'دبلن', 'ريغا', 'فيلنيوس', 'تالين', 'براتيسلافا', 'ليوبليانا'
     ];
     
-    // إختيار وجهة عشوائية
+    // إختيار وجهة عشوائية وتاريخ سفر عشوائي
     const randomDest = destinations[Math.floor(Math.random() * destinations.length)];
+    const randomDay = Math.floor(Math.random() * 28) + 1; // يوم عشوائي
+    const formattedDate = `2025-12-${randomDay < 10 ? '0' + randomDay : randomDay}`; // تاريخ عشوائي في شهر 12
     
     // تعبئة الحقول
     document.getElementById('departure').value = 'القاهرة';
     document.getElementById('destination').value = randomDest;
-    document.getElementById('date').value = ''; 
+    document.getElementById('date').value = formattedDate; // ملء التاريخ ليتخطى المنع
     
-    statusEl.textContent = 'تم تعبئة الحقول للتجربة.. اضغط بحث!';
+    statusEl.textContent = 'تم تعبئة الحقول (شاملة التاريخ عشوائياً).. اضغط بحث!';
 });
 
 // UI functions

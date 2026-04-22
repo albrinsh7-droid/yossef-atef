@@ -84,27 +84,41 @@ async function getBookingsFromDb(){
     return new Promise((res, rej)=>{ const out=[]; const cur=store.openCursor(null,'prev'); cur.onsuccess=(ev)=>{ const c=ev.target.result; if(!c){ res(out); return; } out.push(c.value); c.continue(); }; cur.onerror=(e)=>rej(e.target.error); });
 }
 
-// Seed demo data (تعبئة حقول البحث للسرعة)
+// Seed demo data (تعبئة حقول البحث برحلات فعلية من قاعدة البيانات للسرعة)
 document.getElementById('seed-btn').addEventListener('click', ()=>{
-    const destinations = [
-        'الرياض', 'أبوظبي', 'الكويت', 'عمان', 'بيروت', 'الدوحة', 'المنامة', 'بغداد', 'مسقط', 'تونس',
-        'الرباط', 'الجزائر', 'نواكشوط', 'طرابلس', 'الخرطوم', 'جيبوتي', 'مقديشو', 'موروني', 'القدس', 'دمشق', 'صنعاء',
-        'لندن', 'باريس', 'برلين', 'مدريد', 'روما', 'لشبونة', 'فيينا', 'أمستردام', 'بروكسل', 'أثينا',
-        'ستوكهولم', 'أوسلو', 'كوبنهاغن', 'هلسنكي', 'موسكو', 'كييف', 'وارسو', 'براغ', 'بودابست', 'بوخارست', 
-        'صوفيا', 'بلغراد', 'زغرب', 'برن', 'دبلن', 'ريغا', 'فيلنيوس', 'تالين', 'براتيسلافا', 'ليوبليانا'
+    // قائمة حقيقية من الرحلات الموجودة في قاعدة البيانات (setup.sql)
+    const validFlights = [
+        { dest: 'الرياض', date: '2025-12-20' },
+        { dest: 'أبوظبي', date: '2025-12-21' },
+        { dest: 'الكويت', date: '2025-12-22' },
+        { dest: 'عمان', date: '2025-12-22' },
+        { dest: 'بيروت', date: '2025-12-23' },
+        { dest: 'الدوحة', date: '2025-12-23' },
+        { dest: 'بغداد', date: '2025-12-24' },
+        { dest: 'تونس', date: '2025-12-25' },
+        { dest: 'الجزائر', date: '2025-12-26' },
+        { dest: 'لندن', date: '2026-01-01' },
+        { dest: 'باريس', date: '2026-01-01' },
+        { dest: 'برلين', date: '2026-01-02' },
+        { dest: 'مدريد', date: '2026-01-02' },
+        { dest: 'روما', date: '2026-01-03' },
+        { dest: 'لشبونة', date: '2026-01-03' },
+        { dest: 'فيينا', date: '2026-01-04' },
+        { dest: 'بروكسل', date: '2026-01-05' },
+        { dest: 'ستوكهولم', date: '2026-01-06' },
+        { dest: 'موسكو', date: '2026-01-08' },
+        { dest: 'بودابست', date: '2026-01-10' }
     ];
     
-    // إختيار وجهة عشوائية
-    const randomDest = destinations[Math.floor(Math.random() * destinations.length)];
-    const randomDay = Math.floor(Math.random() * 28) + 1; // يوم عشوائي
-    const formattedDate = `2025-12-${randomDay < 10 ? '0' + randomDay : randomDay}`; // تاريخ عشوائي في شهر 12
+    // إختيار رحلة عشوائية من القائمة الصالحة
+    const randomFlight = validFlights[Math.floor(Math.random() * validFlights.length)];
     
     // تعبئة الحقول
     document.getElementById('departure').value = 'القاهرة';
-    document.getElementById('destination').value = randomDest;
-    document.getElementById('date').value = formattedDate; // ملء التاريخ بصيغة mm/dd/yyyy او yyyy-mm-dd ليتخطى المنع
+    document.getElementById('destination').value = randomFlight.dest;
+    document.getElementById('date').value = randomFlight.date; 
     
-    statusEl.textContent = 'تم تعبئة الحقول للتجربة.. اضغط بحث!';
+    statusEl.textContent = 'تم تعبئة الحقول لرحلة متوفرة.. اضغط بحث!';
 });
 
 // UI functions

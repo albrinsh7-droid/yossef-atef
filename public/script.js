@@ -84,12 +84,27 @@ async function getBookingsFromDb(){
     return new Promise((res, rej)=>{ const out=[]; const cur=store.openCursor(null,'prev'); cur.onsuccess=(ev)=>{ const c=ev.target.result; if(!c){ res(out); return; } out.push(c.value); c.continue(); }; cur.onerror=(e)=>rej(e.target.error); });
 }
 
-// Seed demo data
-document.getElementById('seed-btn').addEventListener('click', async ()=>{
-    await openDb();
-    await addFlightToDb({ airline:'طيران الإمارات', flight_number:'EK123', departure_city:'دبي', destination_city:'جدة', departure_time:new Date(Date.now()+86400000).toISOString(), price:1500, currency:'SAR' });
-    await addFlightToDb({ airline:'الخطوط السعودية', flight_number:'SV456', departure_city:'الرياض', destination_city:'القاهرة', departure_time:new Date(Date.now()+172800000).toISOString(), price:1200, currency:'SAR' });
-    statusEl.textContent = 'تمت إضافة بيانات تجريبية إلى IndexedDB';
+// Seed demo data (تعبئة حقول البحث للسرعة)
+document.getElementById('seed-btn').addEventListener('click', ()=>{
+    const destinations = [
+        'الرياض', 'أبوظبي', 'الكويت', 'عمان', 'بيروت', 'الدوحة', 'المنامة', 'بغداد', 'مسقط', 'تونس',
+        'الرباط', 'الجزائر', 'نواكشوط', 'طرابلس', 'الخرطوم', 'جيبوتي', 'مقديشو', 'موروني', 'القدس', 'دمشق', 'صنعاء',
+        'لندن', 'باريس', 'برلين', 'مدريد', 'روما', 'لشبونة', 'فيينا', 'أمستردام', 'بروكسل', 'أثينا',
+        'ستوكهولم', 'أوسلو', 'كوبنهاغن', 'هلسنكي', 'موسكو', 'كييف', 'وارسو', 'براغ', 'بودابست', 'بوخارست', 
+        'صوفيا', 'بلغراد', 'زغرب', 'برن', 'دبلن', 'ريغا', 'فيلنيوس', 'تالين', 'براتيسلافا', 'ليوبليانا'
+    ];
+    
+    // إختيار وجهة عشوائية
+    const randomDest = destinations[Math.floor(Math.random() * destinations.length)];
+    const randomDay = Math.floor(Math.random() * 28) + 1; // يوم عشوائي
+    const formattedDate = `2025-12-${randomDay < 10 ? '0' + randomDay : randomDay}`; // تاريخ عشوائي في شهر 12
+    
+    // تعبئة الحقول
+    document.getElementById('departure').value = 'القاهرة';
+    document.getElementById('destination').value = randomDest;
+    document.getElementById('date').value = formattedDate; // ملء التاريخ بصيغة mm/dd/yyyy او yyyy-mm-dd ليتخطى المنع
+    
+    statusEl.textContent = 'تم تعبئة الحقول للتجربة.. اضغط بحث!';
 });
 
 // UI functions
@@ -135,23 +150,32 @@ async function handleSearchLocal(e){
     const destination = document.getElementById('destination').value.trim();
     const date = document.getElementById('date').value;
     if(useApi){
-        // call API if desired
         try{
             const q = new URLSearchParams({ departure, destination, date }).toString();
-            const res = await fetch(`${API_BASE}/flights?${q}`);
-            if(!res.ok) throw new Error('فشل جلب الرحلات من الخادم');
+            const res = await fetchWithRetry(`${API_BASE}/flights?${q}`, {}, 3, 800);
+            if(!res.ok) {
+                console.warn('[Flights] API returned', res.status);
+                renderFlightsLocal([]);
+                statusEl.textContent = 'لا توجد رحلات مطابقة للبحث';
+                return;
+            }
             const flights = await res.json();
             renderFlightsLocal(flights);
-            statusEl.textContent = 'تم التحميل من API';
+            statusEl.textContent = flights.length > 0 
+                ? `تم العثور على ${flights.length} رحلة` 
+                : 'لا توجد رحلات مطابقة للبحث';
         } catch(err){ 
-            statusEl.textContent = 'خطأ API: ' + err.message; 
-            console.error(err);
+            console.warn('[Flights] Network error:', err.message);
+            renderFlightsLocal([]);
+            statusEl.textContent = 'تعذر الاتصال بالخادم، يرجى المحاولة مرة أخرى';
         }
     } else {
         await openDb();
         const flights = await getFlightsFromDb({ departure, destination, date });
         renderFlightsLocal(flights);
-        statusEl.textContent = 'تم التحميل من IndexedDB';
+        statusEl.textContent = flights.length > 0 
+            ? `تم العثور على ${flights.length} رحلة`
+            : 'لا توجد رحلات مطابقة للبحث';
     }
 }
 
@@ -160,14 +184,24 @@ async function handleBookingLocal(flightId){
     const passengerName = prompt('أدخل اسم الراكب:');
     if(!passengerName) return alert('اسم الراكب مطلوب');
     if(useApi){
-        // call API
         try{
-            const res = await fetch(`${API_BASE}/bookings`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ flightId, passengerName, passengers }) });
-            if(!res.ok) throw new Error('فشل إنشاء الحجز عبر API');
+            const res = await fetchWithRetry(`${API_BASE}/bookings`, {
+                method:'POST',
+                headers:{'Content-Type':'application/json'},
+                body: JSON.stringify({ flightId, passengerName, passengers })
+            }, 3, 800);
+            if(!res.ok) {
+                console.warn('[Booking] API returned', res.status);
+                alert('حدث خطأ أثناء الحجز، يرجى المحاولة مرة أخرى');
+                return;
+            }
             const data = await res.json();
-            alert('تم الحجز عبر API. رقم الحجز: ' + data.bookingReference);
+            alert('✅ تم الحجز بنجاح! رقم الحجز: ' + data.bookingReference);
             loadBookings();
-        }catch(err){ alert('خطأ API: ' + err.message); }
+        } catch(err) {
+            console.warn('[Booking] Network error:', err.message);
+            alert('تعذر الاتصال بالخادم، يرجى المحاولة مرة أخرى');
+        }
     } else {
         // local booking
         await openDb();
@@ -184,23 +218,53 @@ async function handleBookingLocal(flightId){
     }
 }
 
+// Helper: fetch with automatic retry (silent - never shows errors to user)
+async function fetchWithRetry(url, options = {}, retries = 3, delayMs = 1000) {
+    for (let attempt = 1; attempt <= retries; attempt++) {
+        try {
+            const res = await fetch(url, options);
+            if (res.ok) return res;
+            // If server returned non-ok but we have retries left, wait and retry
+            if (attempt < retries) {
+                await new Promise(r => setTimeout(r, delayMs * attempt));
+                continue;
+            }
+            return res; // return last response even if not ok
+        } catch (err) {
+            if (attempt < retries) {
+                await new Promise(r => setTimeout(r, delayMs * attempt));
+                continue;
+            }
+            throw err; // throw only on last attempt
+        }
+    }
+}
+
 async function loadBookings(){
     if(useApi){
         try{
-            const res = await fetch(`${API_BASE}/bookings`);
-            if(!res.ok) throw new Error('فشل جلب الحجوزات من API');
+            const res = await fetchWithRetry(`${API_BASE}/bookings`, {}, 3, 800);
+            if(!res.ok) {
+                // Silently show empty state - never expose errors to user
+                console.warn('[Bookings] API returned', res.status, '- showing empty state');
+                renderBookingsLocal([]);
+                statusEl.textContent = 'جاهز';
+                return;
+            }
             const list = await res.json();
             renderBookingsLocal(list);
-            statusEl.textContent = 'حجوزات من API';
-        }catch(err){ 
-            statusEl.textContent = 'خطأ API: ' + err.message; 
-            console.error(err);
+            statusEl.textContent = list.length > 0 ? `تم تحميل ${list.length} حجز` : 'جاهز';
+        } catch(err) { 
+            // Network error - show empty state silently
+            console.warn('[Bookings] Network error:', err.message);
+            renderBookingsLocal([]);
+            statusEl.textContent = 'جاهز';
         }
     } else {
         await openDb();
         const list = await getBookingsFromDb();
         renderBookingsLocal(list);
-        statusEl.textContent = 'حجوزات محلية (IndexedDB)';
+        statusEl.textContent = list.length > 0 ? `${list.length} حجز محلي` : 'جاهز';
     }
 }
 
